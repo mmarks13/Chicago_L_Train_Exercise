@@ -71,7 +71,7 @@ summary_CTA_Ridership %>%
 ```
 
 
-It appears as if the Clark/Lake station has the highest average ridership per day at 13900 rides per day. We will confirm that answer as we dig deeper into the data and get confortable with its pitfalls. 
+It appears as if the Clark/Lake station has the highest average ridership per day at 13900 rides per day. We will confirm that answer as we dig deeper into the data and get comfortable with its pitfalls. 
 
 The standard deviation for the Washington/Wabash station is 3525.2. Asking why this standard deviation is what it is implies something is abnormal about it. Let's do a little digging. 
 
@@ -144,7 +144,7 @@ Note: I just happened to choose the UIC station for comparison, and it's cool th
 The Clark/Lake station has the highest average ridership per day at 13900 rides per day.
 
 **Question #2**
-The standard deviation for the Washington/Wabash station is 3525.2. This higher than average standard deviation (relative to its mean) can partially be explained by the station only being in existance since August 2017. 
+The standard deviation for the Washington/Wabash station is 3525.2. This higher than average standard deviation (relative to its mean) can partially be explained by the station only being in existence since August 2017. 
 
 
 # Challenge Questions
@@ -224,7 +224,7 @@ In addition to these free datasets, some proprietary datasets like real estate d
 
 #### How would you want to see data presented, to make it actionable by you or others?
 
-If the action you are tying to take involves a geographic location, it's hard to beat a map. Each dataset can be a layer on the map with which the user can display and interact to aid in their decision making. This empowers yourself and the user to solve the problem in a non-linear path. 
+If the action you are trying to take involves a geographic location, it's hard to beat a map. Each dataset can be a layer on the map with which the user can display and interact to aid in their decision making. This empowers yourself and the user to solve the problem in a non-linear path. 
 
 #### How could an algorithm or model be used? How might your client interact with that algorithm or model?
 An algorithm or model could be used to help forecast neighborhood growth for evaluation of requirement #1. Below are some mock-ups of how a client could interact with such a model. 
