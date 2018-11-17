@@ -1,0 +1,99 @@
+#'@title Get Google Maps Drive Times
+#'@description Use the Google Maps API to get the driving times between locations.
+#'
+#'2,500 free requests per day.
+#'$0.50 USD / 1000 additional requests, up to 100,000 daily.
+#'Max 10 requests per second.
+#'See https://developers.google.com/maps/documentation/distance-matrix/intro for more info.
+#'
+#' @param start_location The starting point for calculating travel distance and time. Takes only one value in the form of a string. You can supply location in the form of an address, latitude/longitude coordinates, or a place ID
+#' @param destinations One or more locations to use as the finishing point for calculating travel distance and time. For more than one location, use a concatenated list, e.g. c('destination1','destination2')
+#' @param time_of_day optional. The departure time of day. Takes one of three arguments, 'morning_rush' (assumes 0800 departure), 'evening_rush' (assumes 1700 departure), and 'midday' (default. assumes 1200 departure). Note: in addition to the time, Google Maps API requires a specific date. To get around this, this function defaults to the Wednesday after the current date.
+#' @param traffic_model optional. Specifies the assumptions to use when calculating time in traffic. This setting affects the value returned in the duration_in_traffic field in the response, which contains the predicted time in traffic based on historical averages. The available values for this parameter are: 'pessimistic' (default), 'best_guess', and 'optimistic'. See https://developers.google.com/maps/documentation/distance-matrix/intro for more info.
+#'
+#' @return returns a dataframe with the following columns
+#'
+#' Destination - the destination
+#'
+#' distance.text - the distance between start_location and the destination
+#'
+#' distance.value - the distance (in meters) between start_location and the destination
+#'
+#' duration.text - the text duration to travel this route in minutes
+#'
+#' duration.value - The length of time it takes to travel this route, expressed in seconds
+#'
+#' duration_in_traffic.text - the text length of time in minutes it takes to travel this route, based on current and historical traffic conditions and the traffic model chosen.
+#'
+#' duration_in_traffic.value -  the length of time in seconds it takes to travel this route, based on current and historical traffic conditions and the traffic model chosen.
+#'
+#' status - see https://developers.google.com/maps/documentation/distance-matrix/intro#StatusCodes
+#' @examples
+#' get_google_drive_times('92115', '92103')
+#' get_google_drive_times('92115', c('92103','90210'))
+#' get_google_drive_times('92115', '92103', time_of_day = "morning_rush")
+#' get_google_drive_times('92115', c('92103','90210'), time_of_day = "morning_rush", traffic_model="optimistic")
+#' get_google_drive_times('92115', c('92103','90210'), time_of_day = "evening_rush", traffic_model="best_guess")
+#' get_google_drive_times('3033 5th Avenue San Diego, CA', c('Naval Medical Center San Diego','NAS North Island'), time_of_day = "morning_rush")
+#'
+#' @export
+get_google_drive_times <- function(start_location,destinations, time_of_day = "midday",traffic_model = "pessimistic"){
+  
+  #so Google maps API needs an EPOCH time when passing a departure time. It also needs a future date. I hard coded future dates in the past
+  #to ensure this function continues to work moving forward, let's automatically figure out a future date.
+  #in this case let's figure out what next wednesday is. I figure it makes sense to pick the middle of the week when looking at drive times in rush hour.
+  Current_Day <- as.Date( Sys.time() )
+  Current_Weekday <- lubridate::wday(Current_Day)
+  Days_From_Next_Wednesday <- 4 - Current_Weekday + 7
+  
+  Next_Wednesday <- Current_Day + lubridate::days(Days_From_Next_Wednesday)
+  
+  Next_Wednesday_Morning_Rush_Time <- Next_Wednesday + lubridate::hours(8)
+  Next_Wednesday_Midday_Time <- Next_Wednesday + lubridate::hours(12)
+  Next_Wednesday_Evening_Rush_Time <- Next_Wednesday + lubridate::hours(17)
+  
+  Next_Wednesday_Morning_Rush_Epoch_Time <- as.integer(as.POSIXct(Next_Wednesday_Morning_Rush_Time))
+  Next_Wednesday_Midday_Epoch_Time <- as.integer(as.POSIXct(Next_Wednesday_Midday_Time))
+  Next_Wednesday_Evening_Rush_Epoch_Time <- as.integer(as.POSIXct(Next_Wednesday_Evening_Rush_Time))
+  
+  if(time_of_day=='morning_rush'){Departure_Time <- Next_Wednesday_Morning_Rush_Epoch_Time
+  }else if(time_of_day=='midday'){Departure_Time <- Next_Wednesday_Midday_Epoch_Time
+  }else if(time_of_day=='evening_rush'){Departure_Time <- Next_Wednesday_Evening_Rush_Epoch_Time
+  }else{Departure_Time <- Next_Wednesday_Midday_Epoch_Time}
+  
+  api_key = "AIzaSyAJVHsNGCS2hUYlWrzs9WlqUC_UdEFqFPI"
+  URL_Part1 <- 'https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins='
+  URL_API_Params <- paste('departure_time=', Departure_Time,'&traffic_model=',traffic_model,sep='')
+  
+  #built URL_Destinations string
+  destinations_With_Plus_Sep <- stringr::str_replace_all(destinations,' ','+')
+  destinations_With_Pip_Concat <- paste(destinations_With_Plus_Sep, collapse="|")
+  URL_Destinations <- paste('&destinations=',destinations_With_Pip_Concat,'&',sep='')
+  
+  start_location <- as.character(start_location)
+  start_location <- gsub(' ','+',start_location)
+  
+  #call API with URL just built
+  geo_data <- RCurl::getURL(paste(URL_Part1,start_location,URL_Destinations,URL_API_Params, paste('&key=',api_key,sep=""),sep=""))
+  geo_data <- jsonlite::fromJSON(geo_data)
+  geo_data <- cbind(geo_data$destination_addresses,data.frame(geo_data$rows[[1]]))
+  colnames(geo_data)[1] <- c('Destination')
+  return(data.frame(geo_data))
+}
+
+#Testing functions.
+
+# destinations <- c('3033 5th Ave San Diego, CA','Naval Medical Center San Diego')
+# start_location <- '5727 Adelaide Ave San Diego, CA'
+# time_of_day <- "Midday"
+# traffic_model = "pessimistic"
+# get_google_drive_times('3033 5th Ave San Diego, CA', '5727 Adelaide Ave San Diego, CA',time_of_day = "morning_rush")
+#
+# get_google_drive_times('3033 5th Ave San Diego, CA', '5727 Adelaide Ave San Diego, CA',time_of_day = "evening_rush")
+# get_google_drive_times('3033 5th Ave San Diego, CA', '5727 Adelaide Ave San Diego, CA',time_of_day = "midday")
+#
+# get_google_drive_times(start_location, destinations, time_of_day = "evening_rush")
+#
+# get_google_drive_times('92115', '92103', time_of_day = "morning_rush", traffic_model="best_guess")
+# get_google_drive_times(start_location, destinations, time_of_day = "evening_rush", traffic_model="best_guess")
+#

@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1542162010504.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4255570546",
+    "id" : "36757B75",
+    "lastKnownWriteTime" : 1542485836,
+    "last_content_update" : 1542485836382,
+    "path" : "~/GitHub/Chicago_L_Train_Exercise/Chicago_L_Train_Exercise.Rmd",
+    "project_path" : "Chicago_L_Train_Exercise.Rmd",
+    "properties" : {
+        "chunk_output_type" : "inline",
+        "cursorPosition" : "3,14",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

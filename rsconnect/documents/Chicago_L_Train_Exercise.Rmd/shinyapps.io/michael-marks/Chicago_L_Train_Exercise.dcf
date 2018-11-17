@@ -1,0 +1,12 @@
+name: Chicago_L_Train_Exercise
+title: Chicago_L_Train_Exercise
+username:
+account: michael-marks
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 577828
+bundleId: 1706375
+url: https://michael-marks.shinyapps.io/chicago_l_train_exercise/
+when: 1542485988.41606
+asMultiple: FALSE
+asStatic: FALSE

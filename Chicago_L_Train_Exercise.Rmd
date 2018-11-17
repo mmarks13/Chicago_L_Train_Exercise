@@ -1,0 +1,350 @@
+---
+title: "Chicago L Train Analysis"
+output: html_document
+runtime: shiny
+---
+Michael Marks - 11/17/2018
+
+### Homework Assignment 
+We have a set of 3 questions for you: 2 Warm Up questions and 1 Challenge question. Please show your work with all questions.
+Located here is data on the number of people to go through the turnstiles at every Chicago "L" station since 2001. For those not familiar, the "L" is our system of elevated and subway trains. You can find more data about the stations here and context here should you need it.
+
+*Warm Up Questions*
+
+* Which stop has the highest average ridership per day, and what is it?
+* What’s the standard deviation for the Washington/Wabash stop? What’s your hypothesis for why?
+
+
+Load the necessary libraries.
+```{r message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(message = F, warning=F) 
+library(shiny)
+library(ggmap)
+library(tidyverse)
+library(knitr)
+library(rmarkdown)
+```
+
+Load the source data and show the top few rows. 
+```{r}
+CTA_Ridership <- read.csv("source_data/CTA_-_Ridership_-__L__Station_Entries_-_Daily_Totals.csv")
+
+head(CTA_Ridership) %>% kable()
+```
+
+**Notes from data's readme:** 
+
+*How people are counted on the 'L'* -  On the rail system, a customer is counted as an "entry" each time he or she passes through a turnstile to enter a station. Customers are not counted as "entries" when they make a "cross-platform" transfer from one rail line to another, since they don't pass through a turnstile. Where the number given for rail is in "boardings," what's presented is a statistically valid estimate of the actual number of boardings onto the rail system. 
+
+Daytype fields in the data are coded as "W" for Weekday, "A" for Saturday and "U" for Sunday/Holidays. Note that New Year's Day, Memorial Day, Independence Day, Labor Day, Thanksgiving, and Christmas Day are considered as "Sundays" for the purposes of ridership reporting. All other holidays are reported as the type of day they fall on. 
+
+Do a quick sanity check on the data. How many stations do we have? what is the data range? etc.
+```{r}
+#looks like the dates we imported as factor data types. load the trusty lubridate package to help manage the dates. 
+library(lubridate)
+
+summary_CTA_Ridership <- CTA_Ridership %>%
+  mutate(date = as.Date(parse_date_time(date, orders = "m/d/y"))) %>%
+  group_by(stationname) %>%
+  summarize(n = n(),
+            min_date = min(date),
+            max_date = max(date),
+            min_rides = min(rides),
+            max_rides = max(rides),
+            mean_rides = round(mean(rides),4), #round so sci notation isn't displayed. 
+            sd_rides = sd(rides)) %>%
+  arrange(desc(mean_rides))  #arrange in descending order so we can answer ? #1
+
+# CTA_Ridership %>%
+#   mutate(date = as.Date(parse_date_time(date, orders = "m/d/y"))) %>% 
+#   mutate(DOW = wday(date,label = T)) %>%
+#   group_by(daytype,DOW) %>%
+#   summarize(n = n())
+#  
+
+#display top 5
+summary_CTA_Ridership %>%
+  top_n(5,mean_rides) %>% kable()
+
+summary_CTA_Ridership %>%
+  filter(stationname == 'Washington/Wabash') %>% kable()
+```
+
+
+It appears as if the Clark/Lake station has the highest average ridership per day at 13900 rides per day. We will confirm that answer as we dig deeper into the data and get confortable with its pitfalls. 
+
+The standard deviation for the Washington/Wabash station is 3525.2. Asking why this standard deviation is what it is implies something is abnormal about it. Let's do a little digging. 
+
+Just how abnormal is this SD? Let's use the coefficient of variation to see. 
+```{r}
+summary_CTA_Ridership %>%
+  mutate(COV = sd_rides/mean_rides) %>%
+  select(stationname,mean_rides,sd_rides,COV) %>%
+  arrange(desc(COV)) %>%
+  mutate(rank = row_number()) %>%
+  top_n(10,COV) %>% kable()
+```
+
+The Washington/Wabash station is not even in the top 10. 
+```{r}
+summary_CTA_Ridership %>%
+  mutate(COV = sd_rides/mean_rides) %>%
+  select(stationname,mean_rides,sd_rides,COV) %>%
+  arrange(desc(COV)) %>%
+  mutate(rank = row_number()) %>%
+  filter(stationname == 'Washington/Wabash') %>% kable()
+```
+
+This station ranks 30th in coefficient of variation among the 148 stations in the data. That puts it in about the 80th percentile, so the standard deviation relative to the mean is higher than average but by no means abnormal. 
+
+Let's see where it ranks in terms of pure standard deviation. 
+```{r}
+summary_CTA_Ridership %>%
+  select(stationname,mean_rides,sd_rides) %>%
+  arrange(desc(sd_rides)) %>%
+  mutate(rank = row_number()) %>%
+  filter(stationname == 'Washington/Wabash') %>% kable()
+```
+
+It is ranked 7th overall in standard deviation, but that can likely be explained by its high average ridership (13th overall).
+
+Let's do a few more sanity check to make sure I haven't missed anything.
+
+```{r}
+summary_CTA_Ridership %>%
+  filter(stationname == 'Washington/Wabash') %>% kable()
+
+CTA_Ridership %>%
+  mutate(date = as.Date(parse_date_time(date, orders = "m/d/y"))) %>%
+  filter(stationname == 'Washington/Wabash') %>%
+  group_by(stationname,daytype) %>%
+  head() %>% kable()
+```
+
+I missed something pretty obvious earlier. It appears this station has only been around since August 2017. 
+```{r fig.height=6, fig.width=15}
+
+CTA_Ridership %>%
+  mutate(date = as.Date(parse_date_time(date, orders = "m/d/y"))) %>%
+  filter(stationname %in% c('Washington/Wabash','UIC-Halsted','Clark/Lake')) %>%
+  filter(date >= '2010-01-01') %>%
+  ggplot(aes(x = date, y = rides,color = stationname, size = stationname)) +
+  geom_line() +
+  theme_bw() +
+  scale_color_manual(values = c("grey80","#c9d2e0", "#0063ff"))+
+  scale_size_manual(values = c(.1,.1,.1)) +
+  ggtitle("Washington/Wabash station compared to two similar stations.")
+```
+
+Note: I just happened to choose the UIC station for comparison, and it's cool that you can see the ridership dip during the summer months when students aren't around. 
+
+### Answers to Warm-Up Questions
+
+**Question #1**
+The Clark/Lake station has the highest average ridership per day at 13900 rides per day.
+
+**Question #2**
+The standard deviation for the Washington/Wabash station is 3525.2. This higher than average standard deviation (relative to its mean) can partially be explained by the station only being in existance since August 2017. 
+
+
+# Challenge Questions
+Please choose a specific business and tell us which business you chose; any kind of business will do. Imagine you’re helping that business owner in Chicago and s/he is looking to open a new location. In the form of writing, potentially supplemented by sketches (computer-drawn or hand-drawn) and links, we want to see your response to these questions:
+- What questions could you potentially explore/answer with this data?
+- Ideally, what other data would you gather or combine to learn even more?
+- How would you want to see data presented, to make it actionable by you or others?
+- How could an algorithm or model be used? How might your client interact with that algorithm or model?
+
+Furthermore, we want to see the results of 2–3 hours of work, using the real data, towards making those ideas a reality. The results could include findings from the data, code, Python/R notebooks, a visualization, results of a statistical model you built, etc. Try not to hide things or throw them away— we want to see your work!
+
+
+## Restaurant New Location Evaluation
+Red's Bar and Grill is looking to open their second location in the city of Chicago. Red's first location has become a staple in their Chicago neighborhood and the owner is looking to repeat that same success in another part of town. 
+
+![](figures/Reds.png)
+
+Based on initial data analysis, on-site observations, and interviews with the owners and patrons, the consulting team has determined that the following things are required for Red's second location:
+
+1. Up and coming neighborhood where foot traffic is projected to grow more than 10% in the next 5 years.
+2. Location is within .25 miles of a residential area containing a sizable population of people between the ages of 18 and 45 without kids.  
+3. No current bar or tavern within .25 miles 
+
+
+### Challenge questions
+#### What questions could you potentially explore/answer with the Chicago L train data?
+
+At a high level, the data simply tell you from where people originate their L train travel on any given day. From this alone alone you could infer things like:
+
+* How many people use the L Train?
+    + in different neighborhoods
+    + on weekends, weekdays, or holidays
+    + in various seasons or parts of the year. 
+    + on event days.
+* From what parts of town are people travelling via the L train
+    + on weekends, weekdays, or holidays
+    + in various seasons or parts of the year. 
+    + on event days.
+* Are there any trends in these numbers (e.g. are originations at certain stations growing/shrinking? )
+* What are the newest stations and what stations have been shut down?
+* What happens to stations when a neighboring station is open or closed. 
+    + do people just use different stations if one is closed or do they use a different mode of transportation
+    + how much of an impact on overall ridership does adding a station have? Do more people overall ride the L train or are people moving from different stations. 
+* What is the dependency among originations between the stations?
+    + if ridership in station A increases, what can we expect in station B?
+* What was the association of X event with ridership? (e.g. Advent of Lyft and Uber)
+    
+For the purposes of helping Red's find a new location, the L train dataset only enables us to begin to determine if location requirement #1 is being met. To assess requirement #1 without assumptions and evaluate requirements 2 and 3, other datasets will be needed in conjunction with the L train data. 
+  
+#### Ideally, what other data would you gather or combine to learn even more?
+
+**Requirement #1 - Neighborhood with 10% growth the next 5 years.**
+
+You could work on a model for predicting neighborhood growth for an eternity. You could pull in every dataset you could get your hands on and try every modeling technique under the sun. To keep things simple, let's just look at a couple freely available datasets that might have some predictive power. 
+
+* Census Data
+    + detailed and complete population, not just a sample; however, only taken every 10 years
+* Chicago bus ridership and traffic data
+    + Combined with the L train ridership, you now have a 'complete' picture of non-pedestrian and non-bike traffic
+* Chicago building permits
+    + Newly granted residential building permits are a key indicator of future growth
+* Crime Data
+    + Decreasing crime could mean an increase in population
+
+In addition to these free datasets, some proprietary datasets like real estate data (e.g. MLS) might be worth exploring.  
+  
+**Requirement #2 - Within .25 miles of a residential area with sizable 18-45 year old population without kids. **
+
+* City Zoning Data
+    + Where are the commercial or residential areas in the city.
+* Census Data
+
+**Requirement #3 - No bar or tavern within 0.25 miles **
+
+* Business Licenses
+    
+
+#### How would you want to see data presented, to make it actionable by you or others?
+
+If the action you are tying to take involves a geographic location, it's hard to beat a map. Each dataset can be a layer on the map with which the user can display and interact to aid in their decision making. This empowers yourself and the user to solve the problem in a non-linear path. 
+
+#### How could an algorithm or model be used? How might your client interact with that algorithm or model?
+An algorithm or model could be used to help forecast neighborhood growth for evaluation of requirement #1. Below are some mock-ups of how a client could interact with such a model. 
+
+**Option #1 - Time Series Graph**
+
+With this option the user can compare growth projections for two different stations (top) or neighborhoods (bottom)
+![](figures/time_series_mockup1.png)
+![](figures/time_series_mockup2.png)
+
+**Option #2 - Map Visualization**
+
+Using a map enables the client to use the predictive model to evaluate requirement #1, while evaluating requirements #2 and #3 at the same time. This exemplifies information dense capabilities of maps. The percent growth can be represented by the size of the dots for each neighborhood or station (station in the case of the mock-up). Using dots isn't ideal for comparison purposes since humans have a hard time distinguishing relative differences in sizes of circles. 
+
+![](figures/map_app_mockup.png)
+
+A better (but more complex) solution would be to get a shapefile of different Chicago neighborhoods and codify their growth predictions in a linear color scale.
+
+![](figures/neighborhood_projection_map.png)
+
+### 2 - 3 hours of work making these mock-ups a reality. 
+Use Google maps API to get the coordinates of the station names. This will enable us to map them. Save the file of coordinates when complete so I don't need to save my Google maps API key with this file. 
+```{r}
+#this code was needed once just to get the coordinates. 
+# library(googleway)
+
+# key <- "This is where my Google Maps API key went"
+
+# # Add "station chicago, IL" to the stationname so we get the right location returned from google. 
+# station_lookup_names <- paste(unique(CTA_Ridership$stationname), "station chicago, IL")
+# station_geocodes <- map_df(station_lookup_names, function(x) data.frame(location_name = x,google_geocode(x, key = key)$results$geometry$location))
+# 
+# write.csv(station_geocodes, file = 'source_data/station_coordinates.csv') 
+
+#load the coordinates file we saved.
+station_coordinates <- read_csv("source_data/station_coordinates.csv")
+head(station_coordinates) %>% kable()
+```
+
+Pull in the Chicago business license data. 
+```{r}
+Chicago_Business_Licenses <- read.csv('source_data/Business_Licenses_-_Current_Active.csv')
+
+Business_Activity_Types_List <-   c('Tavern - Consumption of Liquor on Premise','Sale of Food Prepared Onsite Without Dining Area','Sale of Liquor Outdoors on Private Property','Consumption of Liquor on Premises','Consumption of Liquor on Premises','Preparation of Food and Dining on Premise With Seating','Sale of Food Prepared Onsite With Dining Area')
+
+Chicago_Restaurants_and_Bars <- Chicago_Business_Licenses %>%
+  filter(BUSINESS.ACTIVITY %in% Business_Activity_Types_List) %>%
+  select(DOING.BUSINESS.AS.NAME,BUSINESS.ACTIVITY,LATITUDE,LONGITUDE) %>%
+  rename(DBA_Name = DOING.BUSINESS.AS.NAME, business_activity = BUSINESS.ACTIVITY, lat = LATITUDE, lng = LONGITUDE) %>%
+  distinct()
+
+head(Chicago_Restaurants_and_Bars) %>% kable()
+```
+
+### Interactive Map Mock-Up
+```{r echo=FALSE,fig.height = 10}
+
+register_google(key = "AIzaSyDjGQGziK8dk7zmLk_JL02ugXVsV8l6RCI") 
+  myMap <- get_map(location="Chicago", zoom = 11,  filename = "chicago_map", scale = 2 ) 
+ 
+business_license_types <- unique(as.character(Chicago_Restaurants_and_Bars$business_activity))
+
+station_coordinates_clean <- station_coordinates %>%
+  mutate(stationname = str_replace(location_name, " station chicago, IL","")) %>%
+  select(stationname, lat, lng)
+
+inputPanel(
+  selectInput("bus_lic","Business License Type", choices = business_license_types, selected = "Consumption of Liquor on Premises"),
+  selectInput("station_display","Station Measurement", choices = c("Average Daily Ridership", "Percent Growth"), selected = "Average Daily Ridership"),
+  sliderInput("date_range", "Year Range", 2001, 2018, step = 1, value = c(2001, 2018),sep=""),
+  checkboxGroupInput("days", "", c("Weekend", "Weekday"),selected = c("Weekend", "Weekday"))
+)
+
+
+renderPlot({
+  business_license_plot_df <- Chicago_Restaurants_and_Bars %>%
+    filter(business_activity == input$bus_lic)
+
+  station_plot_df_step1 <- CTA_Ridership %>%
+    mutate(date = as.Date(parse_date_time(date, orders = "m/d/y"))) %>%
+    mutate(DOW = wday(date,label = T)) %>%
+    mutate(day_type = case_when(
+      DOW %in% c('Sat','Sun') ~ 'Weekend',
+      T ~ "Weekday"
+    )) %>%
+    inner_join(station_coordinates_clean) %>%
+    filter(day_type %in% input$days) %>%
+    filter(between(lubridate::year(date),input$date_range[1],input$date_range[2]))
+  
+  if(input$station_display == "Average Daily Ridership"){
+    station_plot_df <- station_plot_df_step1 %>%
+      group_by(stationname,lat,lng) %>%
+      summarize(value = mean(rides))
+
+  } else{
+    min_year <- sym(paste0("yr_",input$date_range[1]))
+    max_year <- sym(paste0("yr_",input$date_range[2]))
+    min_year <- enquo(min_year)
+    max_year <- enquo(max_year)    
+    
+
+    station_plot_df <- station_plot_df_step1 %>%
+      mutate(year = year(date)) %>%
+      group_by(stationname,year,lat,lng) %>%
+      summarize(value = mean(rides)) %>%
+      filter(year %in% input$date_range) %>%
+      ungroup() %>%
+      mutate(year = paste0("yr_",year)) %>%
+      spread(year, value) %>%
+      mutate(value = (!!max_year-!!min_year)/!!min_year) %>%
+      select(stationname,lat,lng,value)
+  }
+
+  ggmap(myMap) +
+    geom_point(data = station_plot_df, aes(x = lng, y = lat,size = value),alpha = .5, color="darkred")+
+    scale_size(range = c(.5, 10)) +
+    geom_point(data = business_license_plot_df, aes(x = lng, y = lat),alpha = .4, color="black", size = .75) +
+    theme_nothing()
+
+
+},  width = 800, height = 800 )
+```
+ 

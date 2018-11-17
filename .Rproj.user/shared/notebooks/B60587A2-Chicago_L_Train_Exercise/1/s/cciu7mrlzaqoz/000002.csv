@@ -1,0 +1,6 @@
+"0","summary_CTA_Ridership %>%"
+"0","  mutate(COV = sd_rides/mean_rides) %>%"
+"0","  select(stationname,mean_rides,sd_rides,COV) %>%"
+"0","  arrange(desc(COV)) %>%"
+"0","  mutate(rank = row_number()) %>%"
+"0","  filter(stationname == 'Washington/Wabash')"

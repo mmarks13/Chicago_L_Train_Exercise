@@ -1,0 +1,8 @@
+"0","Chicago_Business_Licenses <- read.csv('source_data/Business_Licenses_-_Current_Active.csv')"
+"0","Business_Activity_Types_List <-   c('Tavern - Consumption of Liquor on Premise','Sale of Food Prepared Onsite Without Dining Area','Sale of Liquor Outdoors on Private Property','Consumption of Liquor on Premises','Consumption of Liquor on Premises','Preparation of Food and Dining on Premise With Seating','Sale of Food Prepared Onsite With Dining Area')"
+"0","Chicago_Restaurants_and_Bars <- Chicago_Business_Licenses %>%"
+"0","  filter(BUSINESS.ACTIVITY %in% Business_Activity_Types_List) %>%"
+"0","  select(DOING.BUSINESS.AS.NAME,BUSINESS.ACTIVITY,LATITUDE,LONGITUDE) %>%"
+"0","  rename(DBA_Name = DOING.BUSINESS.AS.NAME, business_activity = BUSINESS.ACTIVITY, lat = LATITUDE, lng = LONGITUDE) %>%"
+"0","  distinct()"
+"0","head(Chicago_Restaurants_and_Bars)"

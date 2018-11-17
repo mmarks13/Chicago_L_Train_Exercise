@@ -1,0 +1,4 @@
+"0","CTA_Ridership %>%"
+"0","  mutate(date = as.Date(parse_date_time(date, orders = ""m/d/y""))) %>%"
+"0","  filter(stationname == 'Washington/Wabash') %>%"
+"0","  group_by(stationname,daytype)"

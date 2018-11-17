@@ -1,0 +1,31 @@
+"0","#looks like the dates we imported as factor data types. load the trusty lubridate package to help manage the dates. "
+"0","library(lubridate)"
+"2","
+Attaching package: ‘lubridate’
+
+"
+"2","The following object is masked from ‘package:base’:
+
+    date
+
+"
+"0","summary_CTA_Ridership <- CTA_Ridership %>%"
+"0","  mutate(date = as.Date(parse_date_time(date, orders = ""m/d/y""))) %>%"
+"0","  group_by(stationname) %>%"
+"0","  summarize(n = n(),"
+"0","            min_date = min(date),"
+"0","            max_date = max(date),"
+"0","            min_rides = min(rides),"
+"0","            max_rides = max(rides),"
+"0","            mean_rides = round(mean(rides),4), #round so sci notation isn't displayed. "
+"0","            sd_rides = sd(rides)) %>%"
+"0","  arrange(desc(mean_rides))  #arrange in descending order so we can answer ? #1"
+"0","# CTA_Ridership %>%"
+"0","#   mutate(date = as.Date(parse_date_time(date, orders = ""m/d/y""))) %>% "
+"0","#   mutate(DOW = wday(date,label = T)) %>%"
+"0","#   group_by(daytype,DOW) %>%"
+"0","#   summarize(n = n())"
+"0","#  "
+"0","#display top 5"
+"0","summary_CTA_Ridership %>%"
+"0","  top_n(5,mean_rides)"

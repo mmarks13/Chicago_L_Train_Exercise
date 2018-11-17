@@ -1,0 +1,20 @@
+"0","#this code was needed once just to get the coordinates. "
+"0","# library(googleway)"
+"0","# key <- ""This is where my Google Maps API key went"""
+"0","# # Add ""station chicago, IL"" to the stationname so we get the right location returned from google. "
+"0","# station_lookup_names <- paste(unique(CTA_Ridership$stationname), ""station chicago, IL"")"
+"0","# station_geocodes <- map_df(station_lookup_names, function(x) data.frame(location_name = x,google_geocode(x, key = key)$results$geometry$location))"
+"0","# "
+"0","# write.csv(station_geocodes, file = 'source_data/station_coordinates.csv') "
+"0","#load the coordinates file we saved."
+"0","station_coordinates <- read_csv(""source_data/station_coordinates.csv"")"
+"2","Missing column names filled in: 'X1' [1]"
+"2","Parsed with column specification:
+cols(
+  X1 = col_integer(),
+  location_name = col_character(),
+  lat = col_double(),
+  lng = col_double()
+)
+"
+"0","head(station_coordinates)"
